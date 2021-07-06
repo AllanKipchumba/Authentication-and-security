@@ -1,8 +1,9 @@
 //jshint esversion:6
-const express = require('express');
-const bodyPasrser = require('body-parser');
-const ejs = require('ejs');
-const mongoose = require('mongoose');
+const express = require("express");
+const bodyPasrser = require("body-parser");
+const ejs = require("ejs");
+const mongoose = require("mongoose");
+const encrypt = require("mongoose-encryption");
 
 const app = express();
 
@@ -13,11 +14,16 @@ app.use(bodyPasrser.urlencoded({ extended: true }));
 // setting up database connection
 mongoose.connect("mongodb://localhost:27017/userDB", { useNewUrlParser: true, useUnifiedTopology: true });
 
-const userSchema = {
+const userSchema = new mongoose.Schema({
     email: String,
     password: String
-}
-const User = mongoose.model("user", userSchema);
+});
+
+// secret >> encryption key
+const secret = "Thisisourlittlesecret.";
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
+
+const User = new mongoose.model("user", userSchema);
 
 app.get("/", (req, res) => {
     res.render("home");
@@ -57,6 +63,7 @@ app.post("/login", (req, res) => {
         } else {
             if (foundUser) {
                 if (foundUser.password === password) {
+                    // console.log(foundUser.password);
                     res.render("secrets");
                 }
             }
