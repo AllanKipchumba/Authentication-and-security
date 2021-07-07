@@ -1,10 +1,9 @@
-//jshint esversion:6
-require('dotenv').config();
 const express = require("express");
 const bodyPasrser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcript = require("bcrypt");
+const saltRounds = 10;
 
 const app = express();
 
@@ -36,39 +35,44 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
-    });
 
-    newUser.save((err) => {
-        if (!err) {
-            res.render("secrets");
-        } else {
-            console.log(err);
-        }
+    // auto-generate salt and hash
+    bcript.hash(req.body.password, saltRounds, (err, hash) => {
+
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        });
+
+        newUser.save((err) => {
+            if (!err) {
+                res.render("secrets");
+            } else {
+                console.log(err);
+            }
+        });
     });
 });
 
 app.post("/login", (req, res) => {
 
     const userName = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     User.findOne({ email: userName }, (err, foundUser) => {
         if (err) {
             console.log(err);
         } else {
             if (foundUser) {
-                if (foundUser.password === password) {
-                    // console.log(foundUser.password);
-                    res.render("secrets");
-                }
+                bcript.compare(password, foundUser.password, (err, result) => {
+                    if (result === true) {
+                        res.render("secrets");
+                    }
+                });
             }
         }
     });
 });
-
 
 
 
